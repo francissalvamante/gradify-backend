@@ -11,6 +11,10 @@ const controller = require('./app/controllers/student.controller');
 
 const PATH = './uploads';
 
+if(!fs.existsSync(PATH)) {
+	fs.mkdirSync(PATH);
+}
+
 let storage = multer.diskStorage({
 	destination: (req, file, cb) => {
 		cb(null, PATH);

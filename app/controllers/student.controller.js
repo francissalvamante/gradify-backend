@@ -68,6 +68,45 @@ function saveGrades(studentId, details, quarter, year) {
 	}).save();
 }
 
+exports.processUpload = async (grades) => {
+	let body = grades;
+	let quarter = body[0].split(',')[0];
+	let year = body[0].split(',')[1];
+	let data = [];
+
+	for(var i = 1; i < body.length; i++) {
+		let details = body[i].split(' ');
+		let firstName = details[0];
+		let lastName = details[1];
+
+		let exists = await checkExists(firstName, lastName);
+		if(exists) {
+			saveGrades(exists.studentId, details, quarter, year);
+		} else {
+			let student = new Student({
+				studentId: uuidv4(),
+				firstName: firstName,
+				lastName: lastName
+			});
+
+			await student.save().then((response) => {
+				data.push(response);
+				saveGrades(response.studentId, details, quarter, year);
+			}).catch(err => {
+				return {
+					status: false,
+					message: 'An error has occurred'
+				}
+			});
+		}
+	}
+
+	return {
+		status: true,
+		message: 'Successfully saved'
+	};
+}
+
 exports.grades = async (req, res) => {
 	let body = req.body.content;
 	let quarter = body[0].split(',')[0];

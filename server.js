@@ -1,8 +1,28 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const dbConfig = require('./config/database.config.js');
+const multer = require('multer');
+const cors = require('cors');
+const path = require('path');
 const mongoose = require('mongoose');
 const app = express();
+const fs = require('fs');
+const controller = require('./app/controllers/student.controller');
+
+const PATH = './uploads';
+
+let storage = multer.diskStorage({
+	destination: (req, file, cb) => {
+		cb(null, PATH);
+	},
+	filename: (req, file, cb) => {
+		cb(null, file.fieldname + '-' + Date.now());
+	}
+});
+
+let upload = multer({
+	storage: storage
+});
 
 mongoose.Promise = global.Promise;
 
@@ -36,11 +56,29 @@ mongoose.connect(dbConfig.url, {
 });
 
 app.get('/', (req, res) => {
-	res.json({ "message": "Welcome to EasyNotes application. Take notes quickly. Organize your shit" });
+	res.json({ "message": "Welcome to Gradify Backend" });
+});
+
+app.post('/upload', upload.single('image'), (req, res) => {
+	if(!req.file) {
+		return res.status(500).send({ success: false });
+	} else {
+		fs.readFile(`./${req.file.path}`, async (err, data) => {
+			let grades = data.toString().split('\n');
+			grades.pop();
+			let result = await controller.processUpload(grades);
+			fs.unlinkSync(`./${req.file.path}`);
+			if(result.status) {
+				return res.status(200).send({ success: true });
+			} else {
+				return res.status(500).send({ success: false });
+			}
+		});
+	}
 });
 
 require('./app/routes/student.routes.js')(app);
 
 app.listen(process.env.PORT || 5000, () => {
-	console.log('Server is listening on port 3000');
+	console.log(`Server is listening on port ${process.env.PORT || 5000}`);
 });
